@@ -200,13 +200,10 @@ def push_to_elastic(data: ElasticData):
 
 @app.post("/process/transcribe")
 def transcribe(data: ElasticData):
-    is_error = isError()
     response = {
-        "is_error": True
+        "is_error": True,
+        'error_msg': "error occurred in transcribe service"
     }
-
-    if is_error:
-        response['error_msg'] = "error occurred in transcribe service"
 
     return response
 
