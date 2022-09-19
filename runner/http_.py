@@ -50,7 +50,7 @@ class HttpOperator:
         response_mapping: Dict[str, str] = {},
         conditions: Optional[Dict[str, str]] = None,
         max_retry_count: int = 3,
-        delay: int = 30,
+        delay: int = 10,
         log=logging.getLogger('Http_Operator')
     ) -> None:
         self.base_url = base_url

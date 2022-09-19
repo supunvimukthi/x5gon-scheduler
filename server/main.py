@@ -49,7 +49,7 @@ class SubmitTextData(BaseModel):
 
 
 class GetTextData(BaseModel):
-    job_id: uuid.UUID
+    job_id: str
 
 
 class WikifyTextData(BaseModel):
