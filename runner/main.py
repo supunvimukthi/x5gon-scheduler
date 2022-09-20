@@ -56,7 +56,7 @@ def run():
                         if key in result:
                             values.append((
                                 pending_task[0],
-                                key,
+                                current_task.response_mapping[key],
                                 json.dumps({'value': result[key]}),
                                 pending_task[1],
                                 datetime.now().timestamp()
