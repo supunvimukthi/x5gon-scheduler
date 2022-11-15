@@ -1,12 +1,12 @@
 import psycopg2
 from datetime import timedelta, datetime
 
-from utils.config import config
+from utils.config import db_config
 import utils.ScheduleStatus as ScheduleStatus
 
 CREATE_TABLE_SQLS = (
         """
-        CREATE TABLE schedules (
+        CREATE TABLE IF NOT EXISTS schedules (
              job_id UUID,
              task_id VARCHAR(255),
              status VARCHAR(255) NOT NULL,
@@ -17,7 +17,7 @@ CREATE_TABLE_SQLS = (
              PRIMARY KEY (job_id, task_id)
              )
         """,
-        """ CREATE TABLE runner_data (
+        """ CREATE TABLE IF NOT EXISTS runner_data (
                 job_id UUID,
                 key VARCHAR(255) NOT NULL,
                 value JSON NOT NULL,
@@ -26,11 +26,20 @@ CREATE_TABLE_SQLS = (
                 PRIMARY KEY (job_id, key)
                 )
         """,
-        """ CREATE TABLE dag (
+        """ CREATE TABLE IF NOT EXISTS dag (
                 dag_id UUID,
                 data JSON NOT NULL,
+                username VARCHAR(255) NOT NULL,
                 created_at INTEGER,
                 PRIMARY KEY (dag_id)
+                )
+        """,
+        """ CREATE TABLE IF NOT EXISTS users (
+                username VARCHAR(255) NOT NULL,
+                full_name VARCHAR(255) NOT NULL,
+                hashed_password VARCHAR(255) NOT NULL,
+                email VARCHAR(255),
+                PRIMARY KEY (username)
                 )
         """)
 
@@ -55,12 +64,17 @@ INSERT_KEY_VALUES_SQL = """INSERT INTO
 
 RETRIEVE_KEY_VALUES_SQL = """SELECT * FROM runner_data WHERE job_id = %s and key IN %s;"""
 
-RETRIEVE_DAG_SQL = """SELECT data FROM dag WHERE dag_id = %s;"""
+RETRIEVE_DAG_SQL = """SELECT data, username FROM dag WHERE dag_id = %s;"""
 
-NEW_DAG_SQL = """INSERT INTO dag(dag_id, data, created_at)
-             VALUES(%s, %s, %s);"""
+RETRIEVE_USER_SQL = """SELECT * FROM users WHERE username = %s;"""
 
-params = config()
+NEW_DAG_SQL = """INSERT INTO dag(dag_id, data, username, created_at)
+             VALUES(%s, %s, %s, %s);"""
+
+NEW_USER_SQL = """INSERT INTO users(username, full_name, hashed_password, email)
+             VALUES(%s, %s, %s, %s);"""
+
+params = db_config()
 
 
 def create_new_job(job_id, task_id, dag_id, delay_time=10):
@@ -83,8 +97,8 @@ def update_job_status(job_id, task_id, status):
     conn.close()
 
 
-def update_retry_count(job_id, task_id, retry_count):
-    trigger_time = datetime.now() + timedelta(seconds=5)
+def update_retry_count(job_id, task_id, retry_count, delay = 5):
+    trigger_time = datetime.now() + timedelta(seconds=delay)
     conn = psycopg2.connect(**params)
     cur = conn.cursor()
     cur.execute(UPDATE_RETRY_COUNT_SQL, (retry_count, trigger_time.timestamp(), job_id, task_id))
@@ -141,16 +155,43 @@ def get_dag_data(dag_id):
     results = cur.fetchone()
     cur.close()
     conn.close()
-    return results[0]
+    return results
 
 
-def create_new_dag(dag_id, data):
+def create_new_dag(dag_id, data, username):
     conn = psycopg2.connect(**params)
     cur = conn.cursor()
-    cur.execute(NEW_DAG_SQL, (dag_id, data, datetime.now().timestamp()))
+    cur.execute(NEW_DAG_SQL, (dag_id, data, username, datetime.now().timestamp()))
     cur.close()
     conn.commit()
     conn.close()
+
+
+def create_user(username, full_name, hashed_password, email):
+    conn = psycopg2.connect(**params)
+    cur = conn.cursor()
+    cur.execute(NEW_USER_SQL, (username, full_name, hashed_password, email))
+    cur.close()
+    conn.commit()
+    conn.close()
+
+
+def get_user(username):
+    conn = psycopg2.connect(**params)
+    cur = conn.cursor()
+    cur.execute(RETRIEVE_USER_SQL, [username])
+    results = cur.fetchone()
+    cur.close()
+    conn.close()
+    if results:
+        user = {
+            "username": results[0],
+            "full_name": results[1],
+            "hashed_password": results[2],
+            "email": results[3],
+        }
+        return user
+    return None
 
 
 def create_tables():

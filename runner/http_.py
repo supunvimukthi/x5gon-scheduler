@@ -47,7 +47,7 @@ class HttpOperator:
         log_response: bool = False,
         auth_type: Type[AuthBase] = HTTPBasicAuth,
         request_mapping: Dict[str, str] = {},
-        response_mapping: Dict[str, str] = {},
+        response_transformer: str = None,
         conditions: Optional[Dict[str, str]] = None,
         max_retry_count: int = 3,
         delay: int = 10,
@@ -65,7 +65,7 @@ class HttpOperator:
         self.auth_type = auth_type or None
         self.conditions = conditions
         self.request_mapping = request_mapping
-        self.response_mapping = response_mapping
+        self.response_transformer = response_transformer
         self.max_retry_count = max_retry_count
         self.log = log
         self.delay = delay
@@ -123,5 +123,13 @@ class HttpOperator:
             if not self.response_check(response):
                 raise Exception("Response check returned False.")
         if self.response_filter:
-            return self.response_filter(response)
+            return_val = self.response_filter(response)
+            if self.response_transformer:
+                try:
+                    exec(self.response_transformer)
+                    transformed_val = eval('transformer(return_val)')
+                except Exception as e:
+                    raise Exception("Error occurred in response transformation function: {} - {}".format(self.response_transformer, str(e)))
+                return transformed_val
+            return return_val
         return response.text

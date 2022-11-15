@@ -15,7 +15,7 @@ in_memory_dags = {}
 
 def get_dag(dag_id):
     if dag_id not in in_memory_dags:
-        dag_data = get_dag_data(dag_id)
+        dag_data, _ = get_dag_data(dag_id)
         in_memory_dags[dag_id] = create_dag(dag_data)
 
     return in_memory_dags[dag_id]
@@ -52,15 +52,14 @@ def run():
                 if result:
                     # saving data needed for the task from the result dictionary
                     values = []
-                    for key in current_task.response_mapping.keys():
-                        if key in result:
-                            values.append((
-                                pending_task[0],
-                                current_task.response_mapping[key],
-                                json.dumps({'value': result[key]}),
-                                pending_task[1],
-                                datetime.now().timestamp()
-                            ))
+                    for key in result:
+                        values.append((
+                            pending_task[0],
+                            key,
+                            json.dumps({'value': result[key]}),
+                            pending_task[1],
+                            datetime.now().timestamp()
+                        ))
 
                     insert_values(values)
 

@@ -1,7 +1,7 @@
 from configparser import ConfigParser
 
 
-def config(filename='utils/database.ini', section='postgresql'):
+def db_config(filename='utils/database.ini', section='postgresql'):
     # create a parser
     parser = ConfigParser()
     # read config file
@@ -17,3 +17,21 @@ def config(filename='utils/database.ini', section='postgresql'):
         raise Exception('Section {0} not found in the {1} file'.format(section, filename))
 
     return db
+
+
+def server_config(filename='utils/server.ini', section='server'):
+    # create a parser
+    parser = ConfigParser()
+    # read config file
+    parser.read(filename)
+
+    # get section, default to postgresql
+    server_params = {}
+    if parser.has_section(section):
+        params = parser.items(section)
+        for param in params:
+            server_params[param[0]] = param[1]
+    else:
+        raise Exception('Section {0} not found in the {1} file'.format(section, filename))
+
+    return server_params
